@@ -1,8 +1,8 @@
 //
 // Created by euler.lee on 20. 8. 20..
 //
-#ifndef CPP_COMBINATORICS_H
-#define CPP_COMBINATORICS_H
+#ifndef CATALAN_COMBINATORICS_H
+#define CATALAN_COMBINATORICS_H
 
 #include<iostream>
 #include <vector>
@@ -109,4 +109,4 @@ T polynomialPowerCoef(const FormalPowerSeries<T> &x, unsigned int N, unsigned in
 4*	    (1z^0)^0	(1z^1)^3	(2z^2)^1	(5z^3)^0	(14z^4)^0	(42z^5)^0	= 8
  */
 
-#endif //CPP_COMBINATORICS_H
+#endif //CATALAN_COMBINATORICS_H

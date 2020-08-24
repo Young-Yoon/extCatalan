@@ -2,8 +2,8 @@
 // Created by euler.lee on 20. 8. 18..
 //
 
-#ifndef CPP_RINGS_H
-#define CPP_RINGS_H
+#ifndef CATALAN_RINGS_H
+#define CATALAN_RINGS_H
 
 #include <iostream>
 #include <string>
@@ -12,12 +12,12 @@
 
 using namespace std;
 
-const int verboseRing = 1;
+const int verboseRing = 0;
 
 class Long {
 private:
     vector<long long> V;  // V[0]: Least S. digit --> V.back(): Most S. digit
-    int sign;        // {-1, 0, 1}  sign=0 ==> V becomes empty
+    int sign;             // {-1, 0, 1}
     static long long BASE, Digits;
 
     void unique();  // Unique representation rule: 1) V.back() != 0: 2) 0<= V[i] < BASE
@@ -30,7 +30,7 @@ public:
         sign = (x == T(0) ? 0 : (x>T(0) ? 1 : -1) );
         V.assign(1, sign>=0 ? x : -x);
         unique();
-    }  // explicit: restrict to "long long"
+    }
 
     ~Long() { V.clear(); }
 
@@ -156,13 +156,11 @@ protected:
     vector<T> coef;
     unsigned int dimN;
     string var;
-    static Polynomial<T,V> Zero, One;
 
     virtual void unique();
-    void resetCoef() {
-        coef.erase(coef.begin()+1, coef.end());
-        coef[0] *= T(0);
-    }
+    void resetCoef();
+    void pushZero();
+    void minus();
 public:
     Polynomial<T, V>(unsigned int N=0):dimN(N) { coef.assign(1, T(0)); var = V; }
     Polynomial<T, V>(const T& x, unsigned int N=0):dimN(N) {coef.assign(1, x); var = V; }
@@ -171,15 +169,9 @@ public:
 
     const vector<T>& readCoef() const { return coef; }   // C2662: const Body & const Return needed
     T& operator[] (unsigned int t) {
-        while (coef.size() <= t) {
-            T x = coef[0];
-            x *= T(0);
-            coef.push_back(x);
-        }
+        while (coef.size() <= t) pushZero();
         return coef.at(t);
     }
-
-    void setAsZero() { resetCoef(); }
 
     Polynomial<T,V>& operator+= (const Polynomial<T,V> & x);
     Polynomial<T,V>& operator-= (const Polynomial<T,V> & x) { return *this += (-x); }
@@ -209,44 +201,54 @@ public:
 
     template<typename U, char W> friend ostream & operator <<(ostream&os, const Polynomial<U,W>& p);
 };
-template<typename T, char V> Polynomial<T,V> Polynomial<T,V>::Zero;
-template<typename T, char V> Polynomial<T,V> Polynomial<T,V>::One(T(1));
 
-
-template<typename T, char V>
-void Polynomial<T,V>::unique() {
+template<typename T, char V> void Polynomial<T,V>::unique() {
     while (coef.size()>1 && coef.back()==T(0))  coef.pop_back(); // remove Zero highest coefficients
 }
 
-template<typename T, char V>
-const Polynomial<T,V> Polynomial<T,V>::operator- () const {
+template<typename T, char V> void Polynomial<T,V>::resetCoef() {
+    coef.erase(coef.begin()+1, coef.end());
+    coef[0] *= T(0);
+}
+template<typename T, char V> void Polynomial<T,V>::pushZero() {
+    T x = coef[0];  // T::operator=() : copy property of T
+    x *= T(0);
+    coef.push_back(x);
+}
+
+template<typename T, char V> void Polynomial<T,V>::minus() {
+    for (unsigned int i = 0; i < coef.size(); i++) coef[i] = -coef[i];
+}
+
+template<typename T, char V> const Polynomial<T,V> Polynomial<T,V>::operator- () const {
     Polynomial<T,V> A(*this);
-    for (unsigned int i=0; i<A.coef.size(); i++)
-        A.coef[i] = -A.coef[i];
+    A.minus();
     return A;
 }
 
-template<typename T, char V>
-Polynomial<T,V>& Polynomial<T,V>::operator+= (const Polynomial<T,V> &x) {
-    //Polynomial<T> sum = *this;
-    for (unsigned int i=0; i<x.coef.size(); i++)
-        (*this)[i] += x.coef[i];
-    unique();
-    return *this;  // C4172: return sum: return value disappears
+template<typename T, char V> Polynomial<T,V>& Polynomial<T,V>::operator+= (const Polynomial<T,V> &x) {
+	if (x!=Polynomial<T,V>()){ // Avoid unique
+        for (unsigned int i=0; i<x.coef.size(); i++)
+            if (x.coef[i]!=T(0)) {  // Avoid unique
+                while (i >= coef.size()) pushZero();
+                coef[i] += x.coef[i];
+            }
+        unique();
+    }
+    return *this;
 }
 
-template<typename T, char V>
-Polynomial<T,V>& Polynomial<T,V>::operator*= (const T &x) {
-    if (x==T(0)) resetCoef(); //*this = Polynomial<T,V>();
+template<typename T, char V> Polynomial<T,V>& Polynomial<T,V>::operator*= (const T &x) {
+    if (x==T(0)) resetCoef();
     else
         for (unsigned int i=0; i<coef.size(); i++) coef[i] *= x;
     return *this;
 }
 
-template<typename T, char V>
-Polynomial<T,V>& Polynomial<T,V>::operator<<= (const unsigned int t) {
+template<typename T, char V> Polynomial<T,V>& Polynomial<T,V>::operator<<= (const unsigned int t) {
     if (*this != Polynomial<T,V>()) {
-        T zero(coef[0]); zero*=T(0);
+        T zero = coef[0];  // copy T property
+        zero *= T(0);
         vector<T> zeroCoefs(t, zero);
         coef.insert(coef.begin(), zeroCoefs.begin(), zeroCoefs.end());
     }
@@ -254,64 +256,62 @@ Polynomial<T,V>& Polynomial<T,V>::operator<<= (const unsigned int t) {
     return *this;
 }
 
-template<typename T, char V>
-Polynomial<T,V>& Polynomial<T,V>::operator>>= (const unsigned int t) {
+template<typename T, char V> Polynomial<T,V>& Polynomial<T,V>::operator>>= (const unsigned int t) {
     if (t < coef.size()) coef.erase(coef.begin(), coef.begin()+t);
-    else *this = Polynomial<T,V>();
+    else resetCoef();
     return *this;
 }
 
-template<typename T, char V>
-Polynomial<T,V>& Polynomial<T,V>::operator*= (const Polynomial<T,V> &x) {
-    Polynomial<T,V> Zero = *this;  Zero.resetCoef();
-    if (*this == Zero || x == Zero) return *this = Zero; // if x==0 skip unique()
-    Polynomial<T,V> A = Zero;
-    for (unsigned int i = 0; i < coef.size(); i++)
-        A += ((x * coef[i]) << i);
-    // A.unique(); // Only Cyclic.unique() needed
-    return *this = A;
+template<typename T, char V> Polynomial<T,V>& Polynomial<T,V>::operator*= (const Polynomial<T,V> &x) {
+    Polynomial<T,V> Zero;
+    if (*this == Zero || x == Zero) resetCoef();// avoid unique
+    Polynomial<T,V> A(*this);
+    resetCoef();
+    for (unsigned int i = 0; i < A.coef.size(); i++)
+        *this += ((x * A.coef[i]) << i);
+    return *this;
 }
 
-
-template<typename T, char V>
-Polynomial<T,V>& Polynomial<T,V>::operator/= (const Polynomial<T,V> &x) {
-    Polynomial<T,V> Zero(*this);   Zero.resetCoef();
+template<typename T, char V> Polynomial<T,V>& Polynomial<T,V>::operator/= (const Polynomial<T,V> &x) {
+    Polynomial<T,V> Zero;
     if (x.coef.back() == T(0) || (coef.size() > 1 && coef.back()==T(0))) {cerr<<"Zero Highest Coeff"; return *this = Zero;}
-    Polynomial<T,V> Q(Zero), R(*this);
+    Polynomial<T,V> R(*this);
+    resetCoef();
     while (R != Zero && R.coef.size() >= x.coef.size()) {
         unsigned int s = R.coef.size() - x.coef.size();
-        Q[s] = R.coef.back() / x.coef.back();
-        R -= (x * Q[s])<<s;
+        while (s>=coef.size()) pushZero();
+        coef[s] = R.coef.back() / x.coef.back();
+        R -= (x * coef[s])<<s;
     }
-    return *this = Q;
+    return *this;
 }
 
-template<typename T, char V>
-Polynomial<T,V>& Polynomial<T,V>::operator%= (const Polynomial<T,V> &x) {
-    Polynomial<T,V> Zero(*this);   Zero.resetCoef();
+template<typename T, char V> Polynomial<T,V>& Polynomial<T,V>::operator%= (const Polynomial<T,V> &x) {
+    Polynomial<T,V> Zero;//(*this);   Zero.resetCoef();
     if (x == Zero) { cerr<<"Divided by zero"; return *this = Zero; }
-    Polynomial<T,V> y = *this / x;
-    y *= x;
-    if (y!=Zero) *this -= y;  // Avoid Loops
-    return *this;
+    return *this -= ((*this/x)*x);
 }
 
 template<typename T=Rational<Long> >
 class FormalPowerSeries: public Polynomial<T> {
 protected:
     static unsigned int maxD;  // c_0 + c_1 z + ... + c_maxD z^maxD
-    virtual void unique();
-    using Polynomial<T>::coef;   // Use Parent Class Members
     using Polynomial<T>::var;
+    using Polynomial<T>::coef;   // Use Parent Class Members
+    using Polynomial<T>::minus;
+    using Polynomial<T>::pushZero;
+    virtual void unique();
 
 public:
     FormalPowerSeries<T>() : Polynomial<T>() { }
     FormalPowerSeries<T>(const T& x) : Polynomial<T>(x) { }
-    FormalPowerSeries<T>(vector<T> x) : Polynomial<T>(x) { }
+//    FormalPowerSeries<T>(vector<T> x) : Polynomial<T>(x) { }
     ~FormalPowerSeries<T>() { };
 
     const unsigned int getMaxD() const { return maxD; }
+    void setMaxD(unsigned int dim) { maxD = dim; }
     using Polynomial<T>::readCoef;
+    using Polynomial<T>::resetCoef;
 
     FormalPowerSeries<T>& operator+= (const FormalPowerSeries<T> & x) { Polynomial<T>::operator+=(x); return *this; }
     FormalPowerSeries<T>& operator-= (const FormalPowerSeries<T> & x) { Polynomial<T>::operator+=(-x); return *this; } //FormalPowerSeries<T> y = x; *this += (-y); return *this; }
@@ -321,63 +321,55 @@ public:
     FormalPowerSeries<T>& operator<<= (const unsigned int t) { Polynomial<T>::operator<<=(t); return *this; }
     FormalPowerSeries<T>& operator>>= (const unsigned int t) { Polynomial<T>::operator>>=(t); return *this; }
 
-    const FormalPowerSeries<T> operator - () const { //FormalPowerSeries<T> A(*this); A.Polynomial<T>::operator-(); return A; }
-        FormalPowerSeries<T> A = *this;
-        for (unsigned int i = 0; i < coef.size(); i++)
-            A.coef[i] = -coef[i];
-        return A;
-    }
+    const FormalPowerSeries<T> operator - () const { FormalPowerSeries<T> A = *this; A.minus(); return A; }
     const FormalPowerSeries<T> operator + (const FormalPowerSeries<T> &x) const { return FormalPowerSeries<T> (*this) += x;}
     const FormalPowerSeries<T> operator - (const FormalPowerSeries<T> &x) const { return FormalPowerSeries<T> (*this) -= x;}
     const FormalPowerSeries<T> operator * (const T &x) const { return FormalPowerSeries<T> (*this) *= x;}
-    const FormalPowerSeries<T> operator * (const FormalPowerSeries<T> &x) const { //return FormalPowerSeries<T> (*this) *= x;}
-        FormalPowerSeries<T> A = *this;
+    const FormalPowerSeries<T> operator * (const FormalPowerSeries<T> &x) const { return FormalPowerSeries<T> (*this) *= x;//}
+        /*FormalPowerSeries<T> A = *this;
         A *= x;
-        return A;
+        return A;*/
     }
     const FormalPowerSeries<T> operator / (const FormalPowerSeries<T> &x) const { return FormalPowerSeries<T> (*this) /= x;}
     const FormalPowerSeries<T> operator << (const unsigned int t) const { return FormalPowerSeries<T> (*this) <<= t;}
     const FormalPowerSeries<T> operator >> (const unsigned int t) const { return FormalPowerSeries<T> (*this) >>= t;}
 
-    bool operator==(const FormalPowerSeries<T> &x) const {
-        if (coef.size()!=x.coef.size()) return false;
-        for (unsigned int i=0; i<coef.size(); i++) if (coef[i]!=x.coef[i]) return false;
-        return true;
-    }
+    bool operator==(const FormalPowerSeries<T> &x) const { return Polynomial<T>::operator==(x); }
     bool operator!=(const FormalPowerSeries<T> &x) const { return !(*this==x); }
 };
-template<typename T> unsigned int FormalPowerSeries<T>::maxD = 7; //11
+template<typename T> unsigned int FormalPowerSeries<T>::maxD = 11; //11
 
-template<typename T>
-void FormalPowerSeries<T>::unique() {
+template<typename T> void FormalPowerSeries<T>::unique() {
     if (coef.size()>maxD+1) coef.erase(coef.begin()+maxD+1, coef.end());  // Ignore highest coefficients
     Polynomial<T>::unique();
 }
 
-template<typename T>
-FormalPowerSeries<T>& FormalPowerSeries<T>::operator/= (const FormalPowerSeries<T> &x) {
-    FormalPowerSeries<T> Zero(*this);   Zero.resetCoef();
-    FormalPowerSeries<T> Q(Zero), A(Zero), R = *this;
+template<typename T> FormalPowerSeries<T>& FormalPowerSeries<T>::operator/= (const FormalPowerSeries<T> &x) {
+    FormalPowerSeries<T> Zero;//(*this);   Zero.resetCoef();
+    FormalPowerSeries<T> A, R = *this;
     unsigned int s = 0;
-    while (s<x.coef.size() && x.coef[s] == Zero.coef[0]) s++;
+    while (s<x.coef.size() && x.coef[s] == T(0)) s++;
     if (s==x.coef.size()) { cerr<<"div error"; return *this = Zero; }
     A = x >> s;
     while (R != Zero && s <= maxD) {
-        Q[s] = R[0] / A.coef[0];
-        R -= A * Q[s];
+        while(s>=coef.size()) pushZero();
+        coef[s] = R[0] / A.coef[0];  // new
+        R -= A * coef[s];
         R >>= 1;
         s++;
     }
-    return *this = Q;
+    return *this;
 }
 
 template<typename T=Rational<Long>, char V='w'>
 class Cyclotomic:public Polynomial<T,V> {
 private:
     using Polynomial<T,V>::dimN;
-    virtual void unique();
-    using Polynomial<T,V>::coef;   // Use Parent Class Members
     using Polynomial<T,V>::var;
+    using Polynomial<T,V>::coef;   // Use Parent Class Members
+    virtual void unique();
+    using Polynomial<T,V>::minus;  
+    
     static vector<Cyclotomic<T,V> > Phi;   // Lists of the cyclotomic polynomials Phi(n)
     static vector<unsigned int> phiIdx;
     static Cyclotomic<T,V> Zero, One;
@@ -400,7 +392,7 @@ public:
 
     const Cyclotomic<T,V> operator- () const {
         Cyclotomic<T,V> A(*this);
-        for (unsigned int i=0; i<A.coef.size(); i++) A.coef[i] = -coef[i];
+        A.minus();
         return A;
     }
     
@@ -447,21 +439,18 @@ template<typename T, char V> unsigned int Cyclotomic<T,V>::get_phiIdx(unsigned i
     return phiIdx[n-1];
 }
 
-template<typename T, char V>
-void Cyclotomic<T, V>::unique() {
+template<typename T, char V> void Cyclotomic<T, V>::unique() {
     Polynomial<T,V>::unique();  // Remove the highest order zeroes first.
     Polynomial<T,V>::operator%=(Phi[get_phiIdx(dimN)-1]);
 }
 
-template<typename T>
-ostream& operator << (ostream& os, const Rational<T>& A) {
+template<typename T> ostream& operator << (ostream& os, const Rational<T>& A) {
     os<<A.p;
     if (A.q!=0 && A.q!=1) std::cout<<"/"<<A.q;
     return os;
 }
 
-template<typename T, char V>
-ostream& operator << (ostream& os, const Polynomial<T, V>& p) {
+template<typename T, char V> ostream& operator << (ostream& os, const Polynomial<T, V>& p) {
     os << p.coef[0];
     for (unsigned int j = 1; j < p.coef.size(); j++) {
         //if (p.coef[j] > 0) std::cout << " +";
@@ -473,4 +462,4 @@ ostream& operator << (ostream& os, const Polynomial<T, V>& p) {
     return os;
 }
 
-#endif //CPP_RINGS_H
+#endif //CATALAN_RINGS_H
