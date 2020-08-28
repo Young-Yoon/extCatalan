@@ -10,7 +10,7 @@
 
 using namespace std;
 
-const int verboseCombin = 0;  // 0: Print-off   1: Print details of computation
+int verboseCombin = 0;  // 0: Print-off   1: Print details of computation
 
 /* In computing [z^N] {x(z)}^H,
  * this function gives "ans = C * P", where
@@ -40,12 +40,13 @@ T prodCoef(const vector<T>& c, const vector<unsigned int>& h) {
 /* Integer Weak Partition of N with H elements
  * N = sum_i i*hist[i-1]
  * For example, N=5, H=4
- * 5 = 5+0+0+0
- *   = 4+1+0+0
- *   = 3+2+0+0
- *   = 3+1+1+0
- *   = 2+2+1+0
- *   = 2+1+1+1
+ *        hist  [0 1 2 3 4 5]
+ * 5 = 5+0+0+0  [3 0 0 0 0 1]
+ *   = 4+1+0+0  [2 1 0 0 1 0]
+ *   = 3+2+0+0  [2 0 1 1 0 0]
+ *   = 3+1+1+0  [1 2 0 1 0 0]
+ *   = 2+2+1+0  [1 1 2 0 0 0]
+ *   = 2+1+1+1  [0 3 1 0 0 0]
  */
 template<typename T>
 T integerWeakPartition(unsigned int N, unsigned int C, unsigned int H, vector<unsigned int> * const hist,
@@ -110,3 +111,68 @@ T polynomialPowerCoef(const FormalPowerSeries<T> &x, unsigned int N, unsigned in
  */
 
 #endif //CATALAN_COMBINATORICS_H
+
+
+/* Select H elements from N with lower limit M
+ * For example, S_k,l = A1, A2, A3, ... , Al
+ *
+ * 1 2 3  [1 1 1 0 0]
+ * 1 2 4  [1 1 0 1 0]
+ * 1 2 5  [
+ * 1 3 4
+ * 1 3 5
+ * 1 4 5
+ * 2 3 4
+ * 2 3 5
+ * 3 4 5
+ *
+template<typename T>
+T Combin(unsigned int N, unsigned int H, unsigned int C, vector<unsigned int> * const hist, vector<vector<int> > *visit, vector<vector<T> > *val) {
+    if (H == 0 || M == N) {}
+
+
+    for (int h = 1; h >= 0; --h) {
+        hist->at(C) = (unsigned int)h;
+        hist->front() -= h;
+// for (unsigned int i=0; i < hist->size(); i++) cout << hist->at(i) << "\t"; cout << "N " << N << " C " << C << " h " << h << "\n";
+        int nextN = N-C*h;
+        int nextC = nextN < C ? nextN : C-1;
+        int nextH = H-h;
+        if (nextN > nextC * nextH) {
+            hist->front() += h;
+            hist->at(C) = 0;
+            break;
+        }
+        for (unsigned int i=nextC+1; i<C; i++) hist->at(i) = 0;
+        printIntWeakPartitionH(nextN, nextC, nextH, hist, visit, val, valFcn, pcCoef);
+        hist->front() += h;
+        hist->at(C) = 0;
+    }
+    visit->at(N-1)[C-1] ++;
+
+    return value;
+}
+
+if (N == 0 || C == 1) {
+hist->at(1) = N;
+hist->front() -= N;
+T value = valFcn(pcCoef, *hist);
+unsigned int sum = 0, h = 0;
+for (unsigned int i=0; i < hist->size(); i++) {
+cout << hist->at(i) << "\t";
+h += hist->at(i);
+sum += i*hist->at(i);
+if (sum>0 && i<sum && visit->at(sum-1)[i]==0)
+val->at(sum-1)[i] += value;
+//hist->at(i) = 0;
+}
+cout << value << "\n";
+if (N>0) visit->at(N-1)[C-1] ++;
+hist->front() += N;
+hist->at(1) = 0;
+return;
+}
+
+
+}
+*/

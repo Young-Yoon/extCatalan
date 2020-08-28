@@ -54,21 +54,9 @@ public:
     const Long operator>> (const unsigned int& s) const { return Long(*this) >>= s; }
     const Long operator^ (const unsigned int& s) const { return Long(*this) ^= s; }
 
-    bool operator==(const Long& A) const {
-        if (sign!=A.sign || V.size()!=A.V.size()) return false;
-        for (unsigned int i=0; i<V.size(); i++) if (V[i]!=A.V[i]) return false;
-        return true;
-    }
+    bool operator==(const Long& A) const;
     bool operator!=(const Long& A) const { return !(*this==A); }
-    bool operator<(const Long& A) const {
-        // 1:(1,-1), 2:(1,0), 3:(-1,0), 4:(11,1), 5:(-11,-1), 6:(2,1), 7:(-2,-1), 8:(1,1), 9:(-1,-1), 10:(0,0)
-        if (*this == A) return false;  // Done 8,9,10
-        if (sign != A.sign) return (sign<A.sign);  // Done 1,2,3
-        if (V.size() != A.V.size()) return (V.size() < A.V.size() ? sign==1 : sign==-1);  // Done 4,5
-        unsigned int i=V.size();
-        while (i>0 && V[i-1]==A.V[i-1]) i--;
-        return (V[i-1]<A.V[i-1] ? sign==1 : sign==-1);  // Done 6,7
-    }
+    bool operator<(const Long& A) const;
     bool operator<=(const Long& A) const { return (*this<A) || (*this==A); }
     bool operator>(const Long& A) const { return !(*this<=A); }
     bool operator>=(const Long& A) const { return !(*this<A); }
@@ -81,6 +69,18 @@ T gcd(T a, T b){  // a > b >= 0
     if (b==T(0)) return a;
     else return gcd(b, a%b);
 }
+
+/*
+template<typename T>
+T min(T a, T b){
+    return (a<b ? a: b);
+}
+
+template<typename T>
+T max(T a, T b){
+    return (a>b ? a: b);
+}
+*/
 
 const Long abs(const Long & x);
 

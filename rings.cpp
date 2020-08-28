@@ -175,6 +175,22 @@ Long& Long::operator%= (const Long& A) {
     return *this;
 }
 
+bool Long::operator==(const Long& A) const {
+    if (sign!=A.sign || V.size()!=A.V.size()) return false;
+    for (unsigned int i=0; i<V.size(); i++) if (V[i]!=A.V[i]) return false;
+    return true;
+}
+
+bool Long::operator<(const Long& A) const {
+    // 1:(1,-1), 2:(1,0), 3:(-1,0), 4:(11,1), 5:(-11,-1), 6:(2,1), 7:(-2,-1), 8:(1,1), 9:(-1,-1), 10:(0,0)
+    if (*this == A) return false;  // Done 8,9,10
+    if (sign != A.sign) return (sign<A.sign);  // Done 1,2,3
+    if (V.size() != A.V.size()) return (V.size() < A.V.size() ? sign==1 : sign==-1);  // Done 4,5
+    unsigned int i=V.size();
+    while (i>0 && V[i-1]==A.V[i-1]) i--;
+    return (V[i-1]<A.V[i-1] ? sign==1 : sign==-1);  // Done 6,7
+}
+
 // Print types of numbers
 ostream& operator<< (ostream& os, Long p) {
     if (p.sign == 0) os<<"0";
